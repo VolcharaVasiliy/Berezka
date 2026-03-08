@@ -30,9 +30,9 @@ internal sealed class InstallerForm : Form
             : options.InstallDirectory;
 
         Text = $"{manifest.ProductName} Setup";
-        MinimumSize = new Size(920, 540);
-        MaximumSize = new Size(920, 540);
-        Size = new Size(920, 540);
+        MinimumSize = new Size(920, 620);
+        MaximumSize = new Size(920, 620);
+        Size = new Size(920, 620);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         MinimizeBox = true;
@@ -248,21 +248,21 @@ internal sealed class InstallerForm : Form
         {
             AutoSize = false,
             Location = new Point(0, 454),
-            Size = new Size(592, 34),
+            Size = new Size(592, 44),
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
             ForeColor = Color.FromArgb(95, 103, 117),
             Text = "The installer downloads the package from GitHub Releases, verifies integrity automatically, and then extracts the app for you.",
         };
 
-        _installButton = CreatePrimaryButton("Install", 388, 492, 96);
+        _installButton = CreatePrimaryButton("Install", 388, 532, 96);
         _installButton.Click += async (_, _) => await StartInstallationAsync();
 
-        _cancelButton = CreatePrimaryButton("Cancel", 496, 492, 96);
+        _cancelButton = CreatePrimaryButton("Cancel", 496, 532, 96);
         _cancelButton.BackColor = Color.FromArgb(232, 237, 244);
         _cancelButton.ForeColor = Color.FromArgb(33, 37, 41);
         _cancelButton.Click += (_, _) => CancelOrClose();
 
-        _openFolderButton = CreatePrimaryButton("Open Folder", 278, 492, 98);
+        _openFolderButton = CreatePrimaryButton("Open Folder", 278, 532, 98);
         _openFolderButton.Visible = false;
         _openFolderButton.Enabled = false;
         _openFolderButton.Click += (_, _) => OpenInstallDirectory();
