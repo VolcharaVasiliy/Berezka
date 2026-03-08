@@ -9,6 +9,7 @@
 .hf-home/
 .hf-source/
 .pip-cache/
+.installer-cache/
 release/
 
 # Local models and generated offline assets
@@ -18,6 +19,7 @@ Elochka.App/paddle-home/
 Elochka.App/paddlex-cache/
 Elochka.App/offline-models/
 Elochka.App/python/
+Elochka.Installer/Tools/
 
 # Logs and local settings
 *.log

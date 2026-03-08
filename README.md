@@ -21,6 +21,7 @@ Those heavy runtime assets are restored by the setup scripts after cloning.
 - OCR: PaddleOCR on Python
 - Local translation: NLLB-200 distilled 600M through CTranslate2
 - Optional online providers: LibreTranslate, DeepL, Yandex Cloud
+- Bootstrap installer: WinForms setup app that downloads the packaged release with aria2 and extracts it with 7-Zip
 
 ## Used Projects
 - PaddleOCR: https://github.com/PaddlePaddle/PaddleOCR
@@ -29,6 +30,8 @@ Those heavy runtime assets are restored by the setup scripts after cloning.
 - CTranslate2: https://github.com/OpenNMT/CTranslate2
 - Hugging Face Hub: https://github.com/huggingface/huggingface_hub
 - SentencePiece: https://github.com/google/sentencepiece
+- aria2: https://github.com/aria2/aria2
+- 7-Zip: https://www.7-zip.org/
 
 ## Continue Development From GitHub
 1. Clone the repository anywhere on disk.
@@ -67,6 +70,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build_release.ps1
 ```
 
 The release script publishes a self-contained Windows x64 build, bundles Python plus local models, and creates the `7z_lzma2_mx5_solid` archive.
+
+## Build Bootstrap Installer
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build_installer.ps1
+```
+
+What it does:
+- prepares embedded `aria2c` and `7z` helper binaries
+- writes the installer manifest from the current packaged release
+- publishes a single-file Windows x64 installer executable
+
+Output:
+- `release\Elochka.Setup-<tag>-win-x64.exe`
+
+Important:
+- the bootstrap installer can only download from a publicly reachable release URL
+- if the GitHub repo or release asset is private, pass another public `-DownloadUrl` or publish the release first
 
 ## Notes
 - The repository already contains the full application source code.

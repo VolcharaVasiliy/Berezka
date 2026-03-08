@@ -1,0 +1,12 @@
+﻿{
+    "productName":  "Elochka",
+    "versionTag":  "v0.1.0",
+    "downloadUrl":  "https://github.com/VolcharaVasiliy/elochka-rewrite/releases/download/v0.1.0/elochka-v0.1.0-win-x64_7z_lzma2_mx5_solid.7z",
+    "archiveName":  "elochka-v0.1.0-win-x64_7z_lzma2_mx5_solid.7z",
+    "archiveSizeBytes":  1015250002,
+    "archiveSha256":  "7FADE28EC9914ADD65CDBE5BD7C3B8D9548515D792CD67D67CA8566AF29F7995",
+    "mainExecutableRelativePath":  "Elochka.App.exe",
+    "shortcutName":  "Elochka",
+    "defaultInstallSubdirectory":  "Elochka",
+    "releasePageUrl":  "https://github.com/VolcharaVasiliy/elochka-rewrite/releases/tag/v0.1.0"
+}

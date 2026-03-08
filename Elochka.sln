@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elochka.App", "Elochka.App\Elochka.App.csproj", "{FC8B05C8-B349-4304-9930-67057AB475C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elochka.Installer", "Elochka.Installer\Elochka.Installer.csproj", "{777D64E9-4773-4235-A3B8-1878F3681340}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{FC8B05C8-B349-4304-9930-67057AB475C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC8B05C8-B349-4304-9930-67057AB475C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC8B05C8-B349-4304-9930-67057AB475C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{777D64E9-4773-4235-A3B8-1878F3681340}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{777D64E9-4773-4235-A3B8-1878F3681340}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{777D64E9-4773-4235-A3B8-1878F3681340}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{777D64E9-4773-4235-A3B8-1878F3681340}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
