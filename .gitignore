@@ -1,0 +1,28 @@
+# Build output
+**/bin/
+**/obj/
+
+# Local runtime and generated caches
+.tmp/
+.paddle-home/
+.paddlex-cache/
+.hf-home/
+.hf-source/
+release/
+
+# Local models and generated offline assets
+Models/
+Elochka.App/ocr-cache/
+Elochka.App/paddle-home/
+Elochka.App/paddlex-cache/
+Elochka.App/offline-models/
+Elochka.App/python/
+
+# Logs and local settings
+*.log
+settings.ini
+Elochka.App/bin/**/translation-debug.log
+Elochka.App/bin/**/pipeline-debug.log
+
+# Transfer and temporary launchers
+*.tmp
