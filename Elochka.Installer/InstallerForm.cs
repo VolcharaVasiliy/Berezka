@@ -9,7 +9,6 @@ internal sealed class InstallerForm : Form
     private readonly ProgressBar _progressBar;
     private readonly Label _statusLabel;
     private readonly Label _percentLabel;
-    private readonly TextBox _logTextBox;
     private readonly Button _installButton;
     private readonly Button _cancelButton;
     private readonly Button _browseButton;
@@ -31,9 +30,9 @@ internal sealed class InstallerForm : Form
             : options.InstallDirectory;
 
         Text = $"{manifest.ProductName} Setup";
-        MinimumSize = new Size(920, 620);
-        MaximumSize = new Size(920, 620);
-        Size = new Size(920, 620);
+        MinimumSize = new Size(920, 540);
+        MaximumSize = new Size(920, 540);
+        Size = new Size(920, 540);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         MinimizeBox = true;
@@ -112,7 +111,7 @@ internal sealed class InstallerForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(246, 248, 251),
-            Padding = new Padding(28, 28, 28, 22),
+            Padding = new Padding(28, 28, 28, 18),
         };
 
         var headerTitle = new Label
@@ -245,35 +244,25 @@ internal sealed class InstallerForm : Form
         mainCard.Controls.Add(_progressBar);
         mainCard.Controls.Add(_statusLabel);
 
-        var logLabel = new Label
+        var noteLabel = new Label
         {
-            AutoSize = true,
-            Location = new Point(0, 456),
-            Font = new Font("Segoe UI Semibold", 10.0f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(44, 48, 56),
-            Text = "Installer log",
+            AutoSize = false,
+            Location = new Point(0, 454),
+            Size = new Size(592, 34),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+            ForeColor = Color.FromArgb(95, 103, 117),
+            Text = "The installer downloads the package from GitHub Releases, verifies integrity automatically, and then extracts the app for you.",
         };
 
-        _logTextBox = new TextBox
-        {
-            Location = new Point(0, 482),
-            Size = new Size(592, 78),
-            Multiline = true,
-            ScrollBars = ScrollBars.Vertical,
-            ReadOnly = true,
-            Font = new Font("Consolas", 9.0f, FontStyle.Regular),
-            BackColor = Color.White,
-        };
-
-        _installButton = CreatePrimaryButton("Install", 388, 572, 96);
+        _installButton = CreatePrimaryButton("Install", 388, 492, 96);
         _installButton.Click += async (_, _) => await StartInstallationAsync();
 
-        _cancelButton = CreatePrimaryButton("Cancel", 496, 572, 96);
+        _cancelButton = CreatePrimaryButton("Cancel", 496, 492, 96);
         _cancelButton.BackColor = Color.FromArgb(232, 237, 244);
         _cancelButton.ForeColor = Color.FromArgb(33, 37, 41);
         _cancelButton.Click += (_, _) => CancelOrClose();
 
-        _openFolderButton = CreatePrimaryButton("Open Folder", 278, 572, 98);
+        _openFolderButton = CreatePrimaryButton("Open Folder", 278, 492, 98);
         _openFolderButton.Visible = false;
         _openFolderButton.Enabled = false;
         _openFolderButton.Click += (_, _) => OpenInstallDirectory();
@@ -281,8 +270,7 @@ internal sealed class InstallerForm : Form
         contentPanel.Controls.Add(headerTitle);
         contentPanel.Controls.Add(headerSubtitle);
         contentPanel.Controls.Add(mainCard);
-        contentPanel.Controls.Add(logLabel);
-        contentPanel.Controls.Add(_logTextBox);
+        contentPanel.Controls.Add(noteLabel);
         contentPanel.Controls.Add(_openFolderButton);
         contentPanel.Controls.Add(_installButton);
         contentPanel.Controls.Add(_cancelButton);
@@ -316,7 +304,6 @@ internal sealed class InstallerForm : Form
         }
 
         _currentInstallDirectory = installDirectory;
-        _logTextBox.Clear();
         SetBusyState(isBusy: true);
         _installationCts = new CancellationTokenSource();
         var progress = new Progress<InstallerProgress>(UpdateProgress);
@@ -332,7 +319,6 @@ internal sealed class InstallerForm : Form
             _installationCompleted = true;
             _statusLabel.Text = "Installation completed.";
             _stepLabel.Text = "DONE";
-            AppendLog("Installation completed.");
             _cancelButton.Text = "Close";
             _openFolderButton.Visible = true;
             _openFolderButton.Enabled = true;
@@ -341,13 +327,11 @@ internal sealed class InstallerForm : Form
         {
             _statusLabel.Text = "Installation cancelled.";
             _stepLabel.Text = "CANCELLED";
-            AppendLog("Installation cancelled.");
         }
         catch (Exception exception)
         {
             _statusLabel.Text = "Installation failed.";
             _stepLabel.Text = "FAILED";
-            AppendLog(exception.ToString());
             MessageBox.Show(exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
@@ -373,7 +357,6 @@ internal sealed class InstallerForm : Form
             InstallerStage.Completed => "DONE",
             _ => "PREPARING",
         };
-        AppendLog($"{update.Percent}% - {update.Message}");
     }
 
     private void BrowseForInstallDirectory()
@@ -424,11 +407,6 @@ internal sealed class InstallerForm : Form
         _desktopShortcutCheckBox.Enabled = !isBusy;
         _browseButton.Enabled = !isBusy;
         _cancelButton.Enabled = true;
-    }
-
-    private void AppendLog(string message)
-    {
-        _logTextBox.AppendText(message + Environment.NewLine);
     }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs eventArgs)
