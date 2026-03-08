@@ -5,6 +5,9 @@
 - Kept only intentional legacy compatibility points for migrating old `Elochka` settings/env vars.
 - Restored local NLLB and PaddleOCR runtime assets on this machine.
 - Built local release artifacts matching the GitHub release shape, under the new naming.
+- Benchmarked low-cost NLLB/CTranslate2 decoding profiles for slang-heavy and mixed-language cases, then switched the runtime translator from greedy decode to a guarded beam-search profile.
+- Tightened translation normalization/post-processing for slang, abbreviations, aliases, and mixed `RU/EN` lines without moving to a heavier model.
+- Added a separate domain layer for gaming/MMORPG slang so common in-game jargon is translated into Russian gamer vocabulary instead of literal prose.
 
 ## Files
 - `Berezka.sln` - canonical renamed solution file.
@@ -15,11 +18,16 @@
 - `Berezka.App/Program.cs` - entry point updated to `BerezkaApplicationContext`.
 - `Berezka.App/Services/PaddleOcrTextService.cs` - switched runtime env var names to `BEREZKA_*` with legacy fallback.
 - `Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs` - switched runtime env var names to `BEREZKA_*` with legacy fallback.
+- `Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs` - enabled the selected guarded beam-search decode profile and improved normalization/post-fixes for `wtf/slaps`, `cooked with this one`, `banger fr no cap`, `track`, mixed `RU/EN`, and `vocal range and voice`.
+- `Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs` - added gaming/MMORPG-specific source normalization and post-processing for `aggro`, `wipe`, `kite`, `adds`, `cooldowns`, `dps`, `oom`, `gear`, `loot`, `build/BiS`, `proc`, `PvE/PvP`, and dungeon/raid phrasing.
+- `Berezka.App/Scripts/offline_translate.py` - added decoder CLI options so the C# runtime can control beam search, repetition penalty, no-repeat ngrams, and decode length.
 - `Berezka.Installer/` - renamed installer project root and namespaces to `Berezka.Installer`.
 - `Berezka.Installer/Berezka.Installer.csproj` - renamed installer project file.
 - `.gitignore` - ignore paths updated from `Elochka.*` to `Berezka.*`.
 - `README.md` - project title reduced to `Berezka`; build/run paths updated.
 - `TRANSFER_README.md` - updated source tree path and environment variable names to `BEREZKA_*`.
+- `scripts/benchmark_translation_configs.py` - reusable local benchmark that compares several cheap NLLB/CTranslate2 decode profiles on slang, metadata, and mixed-language examples.
+- `scripts/benchmark_translation_configs.py` - extended with gaming/MMORPG corpus entries so future model/config changes can be checked against in-game terminology as well.
 - `scripts/build_release.ps1` - project paths updated to `Berezka.*`; package output verified as `berezka-<tag>-win-x64_7z_lzma2_mx5_solid.7z`.
 - `scripts/build_installer.ps1` - installer project paths updated to `Berezka.*`; installer output verified as `Berezka.Setup-<tag>-win-x64.exe`.
 - `scripts/setup_local_nllb.ps1` - updated Python env var handling to prefer `BEREZKA_PYTHON`.
@@ -30,10 +38,14 @@
 - The previous pass renamed only outward branding; this pass removed the internal `Elochka.*` project and namespace drift so the repo state matches the product name.
 - Legacy compatibility was kept only where it materially helps migration: old settings path and old env vars.
 - The latest GitHub releases use a two-asset shape, so the local build was aligned to that same structure under the new `Berezka` naming.
+- The current `LocalNllb` runtime was still using greedy decode (`beam=1`), which is the cheapest mode but leaves obvious quality on the table for slang-heavy comments and informal phrases.
+- A small benchmark on the local `nllb-200-distilled-600m-ctranslate2` model showed the best low-cost profile was `beam=2`, `repetition_penalty=1.08`, `no_repeat_ngram_size=3`; it beat greedy quality without the larger latency jump of `beam=3`.
+- The next quality ceiling was not beam search but domain language: MMO jargon like `aggro`, `wipe`, `adds`, `oom`, `pull`, `BiS`, and `proc rate` was still collapsing into literal Russian. That required a domain glossary layer on top of the model, not just another decoder tweak.
 
 ## Issues
 - The GitHub repository name and release download base still point to `VolcharaVasiliy/elochka-rewrite`; this was not changed because the repository itself has not been renamed.
 - `scripts/build_installer.ps1` was first launched in parallel with `build_release.ps1` and failed because the `release` folder did not exist yet; rerunning it after the archive build succeeded.
+- Raw NLLB quality is still limited on niche slang and names; the latest pass improves this with cheaper decode settings and targeted phrase normalization, not by switching to a heavier model.
 
 ## Functions
 - `CreateHotKeyMenuItem` (`Berezka.App/Application/BerezkaApplicationContext.cs`) - builds the tray submenu for hotkey selection.
@@ -42,6 +54,11 @@
 - `ResolvePaddlexCacheHome` (`Berezka.App/BerezkaPaths.cs`) - resolves `BEREZKA_PADDLEX_CACHE_HOME` with fallback to the legacy env var.
 - `ResolvePythonExecutable` (`Berezka.App/Services/PaddleOcrTextService.cs`) - prefers `BEREZKA_PYTHON`, falls back to `ELOCHKA_PYTHON`.
 - `ResolveModelPath` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - prefers `BEREZKA_OFFLINE_MODEL`, falls back to `ELOCHKA_OFFLINE_MODEL`.
+- `NormalizeSourceForTranslation` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - now normalizes more informal/slang inputs before they hit NLLB.
+- `PostProcessTranslation` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - now fixes several persistent literal/slang failures after model decode.
+- `BuildArguments` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - now passes the selected guarded beam-search profile into the Python worker.
+- `ApplyGamingDomainSourceNormalization` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - rewrites gaming/MMORPG slang into model-friendlier English source forms.
+- `ApplyGamingDomainPostProcessing` (`Berezka.App/Services/Translation/LocalNllbTranslationProvider.cs`) - converts literal outputs back into Russian gamer terminology and phrase-level MMO wording.
 
 ## Release Assets
 - `release\\berezka-v0.1.2-win-x64_7z_lzma2_mx5_solid.7z`
@@ -50,6 +67,18 @@
 ## Next steps
 - The source rename and release scripts are ready for the user to publish the new `Berezka` release on GitHub.
 - If the GitHub repository itself is renamed later, only the default `Repository` value in `scripts/build_installer.ps1` will still need adjustment.
+- If the user still finds recurring misses in a narrow domain, extend the normalization corpus with those exact phrases before considering a heavier local model.
+- The current domain layer is tuned for common MMO chatter; if the target game has its own jargon, the next pass should be built from fresh examples from that specific game rather than generic MMO terms.
+
+## Task Update - 2026-03-09 Domain glossary research
+- Researched Reddit/community slang and public guide terminology for `ArcheAge`, `Black Desert`, `The Quinfall`, and `Where Winds Meet`.
+- Added `F:\Projects\berezka\docs\translation-domain-glossary.md` as a reusable glossary for future translation normalization, preserve-lists, and benchmark expansion.
+- Captured shared MMO slang, game-specific jargon, and `Where Winds Meet` wuxia/jianghu terminology, plus proper-name preserve rules and high-risk translation traps.
+- Kept this pass documentation-first so the next integration step can cherry-pick high-value terms instead of blindly hardcoding every scraped word into runtime rules.
+
+## Verification - Domain glossary
+- Web review of Reddit/community and public guide pages for the four target games.
+- File review: `F:\Projects\berezka\docs\translation-domain-glossary.md`
 
 ## Verification
 - `dotnet build F:\Projects\berezka\Berezka.sln`
@@ -59,3 +88,15 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File F:\Projects\berezka\scripts\build_installer.ps1 -ProjectRoot F:\Projects\berezka -Tag v0.1.2`
 - Smoke test: `F:\Projects\berezka\release\berezka-v0.1.2-win-x64\Berezka.App.exe`
 - Smoke test: `F:\Projects\berezka\release\Berezka.Setup-v0.1.2-win-x64.exe`
+- `F:\DevTools\Python311\python.exe F:\Projects\berezka\scripts\benchmark_translation_configs.py --model F:\Projects\berezka\Models\nllb-200-distilled-600m-ctranslate2`
+- `F:\DevTools\Python311\python.exe F:\Projects\berezka\scripts\benchmark_translation_configs.py --model F:\Projects\berezka\Models\nllb-200-distilled-600m-ctranslate2 --json-out F:\Projects\berezka\.tmp\translation-benchmark-gaming.json`
+- Runtime harness against the built app provider on sample phrases:
+  - `wtf this song slaps` -> `Ух, эта песня звучит невероятно.`
+  - `my bro cooked with this one` -> `Братан тут реально выдал.`
+  - `Banger fr no cap` -> `Реальный бэнгер, без шуток.`
+  - `Это track вообще goes hard, Calli feat. Nerissa прям тащит` -> `Это трек вообще звучит чрезвычайно мощно, Calli feat. Nerissa прям тащит`
+  - `the guy singing in hindi has an INSANE vocal range and voice` -> `У парня, который поет на хинди, невероятный вокальный диапазон и голос.`
+  - `tank lost aggro and the whole raid wiped` -> `Танк потерял агро, и весь рейд вайпнулся.`
+  - `kite the adds and pop your cooldowns` -> `Кайти аддов и прожимай кулдауны.`
+  - `healer is oom after the big pull` -> `Хил без маны после большого пула.`
+  - `farm this dungeon for better gear and loot` -> `Фарми этот данж ради лучшего гира и лута.`

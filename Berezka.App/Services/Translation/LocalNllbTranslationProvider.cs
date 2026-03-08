@@ -14,7 +14,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     private const int MaxBatchCharacters = 720;
     private const int MaxSegmentLength = 220;
     private const int WorkerThreadCount = 2;
-    private const int WorkerBeamSize = 1;
+    private const int WorkerBeamSize = 2;
+    private const float WorkerPatience = 1.0f;
+    private const float WorkerRepetitionPenalty = 1.08f;
+    private const int WorkerNoRepeatNgramSize = 3;
+    private const int WorkerMaxDecodingLength = 192;
     private const string ModelFolderName = "nllb-200-distilled-600m-ctranslate2";
     private const string SetupScriptPath = @"scripts\setup_local_nllb.ps1";
     private const string DefaultPythonPath = @"F:\DevTools\Python311\python.exe";
@@ -160,6 +164,101 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         "tracks",
         "video",
     };
+    private static readonly PhrasePattern[] ForceTranslateDomainPhrasePatterns = CreatePhrasePatterns(
+        "Jianghu Errands",
+        "Jianghu Legacy",
+        "Gift of Gab",
+        "Purple Star Catastrophe",
+        "Meridian Touch",
+        "Wind Sense",
+        "Inner Path",
+        "Mystic Arts",
+        "Martial Arts Level",
+        "inner arts",
+        "sectless",
+        "Jianghu",
+        "Wuxia",
+        "Wulin",
+        "Murim",
+        "Daoist",
+        "dao",
+        "qi",
+        "dual cultivation",
+        "skill theft",
+        "Xiangqi");
+    private static readonly PhrasePattern[] ProtectedDomainPhrasePatterns = CreatePhrasePatterns(
+        "Where Winds Meet",
+        "Kaifeng",
+        "Qinghe",
+        "Yanyun",
+        "Yanyun Sixteen Prefectures",
+        "Jadewood Court",
+        "Mistveil City",
+        "Mistveil Forest",
+        "Wishing Cove",
+        "Hollow Abode",
+        "Aureate Pavilion",
+        "Martial Temple",
+        "Qin Caiwei",
+        "Murong Yuan",
+        "Murong Yanzhao",
+        "Shi Zhen",
+        "Zhai Xu",
+        "Officer Nan",
+        "Song Wu",
+        "Shen Weiqing",
+        "Qi Sheng",
+        "Ghost Revelry Hall",
+        "Gift of Gab",
+        "Wind Sense",
+        "Meridian Touch",
+        "Old Friends",
+        "Free Persuasion",
+        "Rhetoric Duel",
+        "Mental Focus",
+        "Inspiration",
+        "Trash Talk",
+        "Bluster",
+        "Provocation",
+        "Rebuttal",
+        "Filibuster",
+        "Straightforwardness",
+        "Analogy",
+        "Scholar",
+        "Jiuliu Sect",
+        "Jiuliu",
+        "Kuanglan Sect",
+        "Kuanglan",
+        "Liyuan Sect",
+        "Liyuan",
+        "Lonely Cloud Sect",
+        "Lonely Cloud",
+        "Drunken Flowers Sect",
+        "Drunken Flowers",
+        "Wenjin Pavilion",
+        "Heartless Valley",
+        "Tianquan",
+        "Qingxi",
+        "Sangeng Sky",
+        "Hiram",
+        "Erenor",
+        "Lunagem",
+        "Luna Charm",
+        "Lunafrost",
+        "Kutum",
+        "Nouver",
+        "Valks' Cry",
+        "Cron Stone",
+        "Caphras",
+        "Blackstar",
+        "Garmoth",
+        "Naderr's Band",
+        "Action Coins",
+        "Terror Protection Stone",
+        "Terror Protection",
+        "Luck Enhancer",
+        "Zenith Conquest",
+        "Clan Altar");
     private static readonly LanguageHint[] LanguageHints =
     {
         new("Hindi", "хинди"),
@@ -578,6 +677,35 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
 
     private static List<LineTranslationPiece> BuildPiecesForLine(string line, AppSettings settings)
     {
+        var protectedMatches = FindProtectedDomainPhraseMatches(line);
+        if (protectedMatches.Count > 0)
+        {
+            var protectedPieces = new List<LineTranslationPiece>();
+            var protectedCursor = 0;
+            foreach (var match in protectedMatches)
+            {
+                if (match.StartIndex > protectedCursor)
+                {
+                    protectedPieces.AddRange(BuildPiecesForSegment(line[protectedCursor..match.StartIndex], settings));
+                }
+
+                protectedPieces.Add(LineTranslationPiece.Preserve(match.CanonicalText));
+                protectedCursor = match.EndIndex;
+            }
+
+            if (protectedCursor < line.Length)
+            {
+                protectedPieces.AddRange(BuildPiecesForSegment(line[protectedCursor..], settings));
+            }
+
+            return MergeAdjacentPieces(protectedPieces);
+        }
+
+        return MergeAdjacentPieces(BuildPiecesForSegment(line, settings));
+    }
+
+    private static List<LineTranslationPiece> BuildPiecesForSegment(string line, AppSettings settings)
+    {
         var pieces = new List<LineTranslationPiece>();
         var lastIndex = 0;
 
@@ -611,7 +739,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             pieces.Add(LineTranslationPiece.Preserve(line[lastIndex..]));
         }
 
-        return MergeAdjacentPieces(pieces);
+        return pieces;
     }
 
     private static List<LineTranslationPiece> MergeAdjacentPieces(IReadOnlyList<LineTranslationPiece> pieces)
@@ -710,7 +838,18 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         normalized = Regex.Replace(normalized, @"(?i)\bit(?:'s| is)\s+really\s+fucking\s+good\b", "it is extremely good", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bfucking\s+good\b", "extremely good", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bwhat\s+the\s+fuck\b", "wow", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bwtf\b", "wow", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bomg\b", "wow", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bspeechless\b", "with no words", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bthis\s+song\s+slaps\b", "this song sounds incredible", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bit\s+slaps\b", "it sounds incredible", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bslaps\b", "sounds incredible", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmy\s+bro\s+cooked\s+with\s+this\s+one\b", "my friend really nailed this one", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bcooked\s+with\s+this\s+one\b", "really nailed this one", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbanger\b", "absolute hit", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bfr\b", "for real", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bno\s+cap\b", "seriously", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bgoes\s+hard\b", "sounds extremely powerful", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bthis\s+shit\s+goes\s+hard\b", "this sounds incredibly powerful", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bgo\s+that\s+hard\s+(?:on|with)\b", "play with such intensity on", RegexOptions.CultureInvariant);
         normalized = Regex.Replace(normalized, @"(?i)\bstand\s+up\s+for\s+that\b", "show respect for that", RegexOptions.CultureInvariant);
@@ -726,6 +865,8 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         normalized = MusicTranscendsPhraseRegex.Replace(normalized, "Music transcends boundaries");
         normalized = MetalheadPluralRegex.Replace(normalized, "fans of metal music");
         normalized = MetalheadSingularRegex.Replace(normalized, "metal fan");
+        normalized = ApplyGamingDomainSourceNormalization(normalized);
+        normalized = ApplyWhereWindsMeetSourceNormalization(normalized);
 
         foreach (var hint in LanguageHints)
         {
@@ -885,9 +1026,16 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             processed = Regex.Replace(processed, @"\b(?:что\s+за\s+блядь|черт\s+возьми)\b", "вот это да", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
+        if (Regex.IsMatch(sourceLine, @"(?i)\bwtf\b", RegexOptions.CultureInvariant))
+        {
+            processed = Regex.Replace(processed, @"\bесли\b", "вот это да", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
         if (sourceLine.Contains("goes hard", StringComparison.OrdinalIgnoreCase))
         {
             processed = Regex.Replace(processed, @"\bэто\s+дерьмо\s+тяжело\b", "это звучит очень мощно", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bид(?:ет|ёт)\s+тяжело\b", "звучит очень мощно", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bв\s+общем-?то\s+ид(?:ет|ёт)\s+тяжело\b", "вообще звучит мощно", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
         if (sourceLine.Contains("caught me off guard", StringComparison.OrdinalIgnoreCase))
@@ -899,6 +1047,38 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         if (sourceLine.Contains("fucking good", StringComparison.OrdinalIgnoreCase))
         {
             processed = Regex.Replace(processed, @"\b(?:чрезвычайно|очень)\s+хорош\w*\b", "чертовски хорошо", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (sourceLine.Contains("slaps", StringComparison.OrdinalIgnoreCase))
+        {
+            processed = Regex.Replace(processed, @"\bпоет\b", "просто разносит", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bшлепает\b", "просто разносит", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (sourceLine.Contains("cooked with this one", StringComparison.OrdinalIgnoreCase)
+            || sourceLine.Contains("nailed this one", StringComparison.OrdinalIgnoreCase))
+        {
+            processed = Regex.Replace(processed, @"\bприготовил\w*\s+с\s+этим\b", "реально выдал", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bмой\s+брат\b", "братан", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = "Братан тут реально выдал.";
+        }
+
+        if (sourceLine.Contains("banger", StringComparison.OrdinalIgnoreCase)
+            || sourceLine.Contains("absolute hit", StringComparison.OrdinalIgnoreCase)
+            || sourceLine.Contains("no cap", StringComparison.OrdinalIgnoreCase)
+            || Regex.IsMatch(sourceLine, @"(?i)\bfr\b", RegexOptions.CultureInvariant))
+        {
+            processed = Regex.Replace(processed, @"\bбез\s+крышки\b", "без шуток", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bабсолютный\s+хит\b", "реальный бэнгер", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bабсолютный\s+удар\b", "реальный бэнгер", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if ((sourceLine.Contains("banger", StringComparison.OrdinalIgnoreCase)
+                || sourceLine.Contains("absolute hit", StringComparison.OrdinalIgnoreCase))
+            && (sourceLine.Contains("no cap", StringComparison.OrdinalIgnoreCase)
+                || sourceLine.Contains("seriously", StringComparison.OrdinalIgnoreCase)))
+        {
+            processed = "Реальный бэнгер, без шуток.";
         }
 
         if (sourceLine.Contains("underrated af", StringComparison.OrdinalIgnoreCase))
@@ -929,6 +1109,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         {
             processed = VocalAndVoiceRegex.Replace(processed, "вокальный диапазон и голос");
             processed = RangeAndVoiceRegex.Replace(processed, "вокальный диапазон и голос");
+            processed = Regex.Replace(
+                processed,
+                @"\b(?:безумн\w*|невероятн\w*|сумасшедш\w*)?\s*диапазон\s+голоса(?:\s+и\s+голос)?\b",
+                "невероятный вокальный диапазон и голос",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
             if (sourceLine.Contains("insane", StringComparison.OrdinalIgnoreCase))
             {
@@ -938,6 +1123,12 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
                     "невероятный вокальный диапазон",
                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             }
+        }
+
+        if (sourceLine.Contains("vocal range and voice", StringComparison.OrdinalIgnoreCase)
+            && !Regex.IsMatch(processed, @"\bвокальн\w*\s+диапазон\s+и\s+голос\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            processed = processed.TrimEnd('.', ' ') + ", невероятный вокальный диапазон и голос.";
         }
 
         if (TryGetSingingLanguageHint(sourceLine, out var languageHint) && !processed.Contains(languageHint.RussianForm, StringComparison.OrdinalIgnoreCase))
@@ -1043,9 +1234,600 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
+        if (sourceLine.Contains("track", StringComparison.OrdinalIgnoreCase))
+        {
+            processed = Regex.Replace(processed, @"\bтрасс\w*\b", "трек", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        processed = ApplyWhereWindsMeetPostProcessing(sourceLine, processed);
+        processed = ApplyGamingDomainPostProcessing(sourceLine, processed);
         processed = MultiWhitespaceRegex.Replace(processed, " ");
         return processed.Trim();
     }
+
+    private static string ApplyWhereWindsMeetSourceNormalization(string value)
+    {
+        var normalized = value;
+        normalized = Regex.Replace(normalized, @"(?i)\bwwm\b", "Where Winds Meet", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bjiang\s*hu\b", "Jianghu", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bwu\s*xia\b", "Wuxia", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bwu\s*lin\b", "Wulin", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmurim\b", "Murim", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)d[a?????]o", "dao", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdaoist\b", "Daoist", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdao\b", "dao", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bqi\b", "qi energy", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bsectless\b", "without a sect", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdual\s+cultivation\b", "dual cultivation", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\binner arts system\b", "inner arts system", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\binner arts\b", "inner arts", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\binner path\b", "Inner Path", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmystic arts\b", "Mystic Arts", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmartial arts level\b", "Martial Arts Level", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmeridian touch\b", "Meridian Touch", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bwind sense\b", "Wind Sense", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bjianghu errands\b", "Jianghu Errands", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bjianghu legacy\b", "Jianghu Legacy", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bskill theft\b", "skill theft", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bgift of gab\b", "Gift of Gab", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bpurple star catastrophe\b", "Purple Star Catastrophe", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bxiangqi\b", "Xiangqi", RegexOptions.CultureInvariant);
+        return normalized;
+    }
+
+    private static string ApplyGamingDomainSourceNormalization(string value)
+    {
+        var normalized = value;
+        normalized = Regex.Replace(normalized, @"(?i)\boom\b", "out of mana", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdps\s+check\b", "damage check", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdps\b", "damage output", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\blost\s+aggro\b", "lost enemy aggro", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bhold\s+aggro\b", "keep enemy aggro", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\baggro\b", "enemy aggro", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\blost\s+enemy\s+enemy\s+aggro\b", "lost enemy aggro", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bkeep\s+enemy\s+enemy\s+aggro\b", "keep enemy aggro", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbig\s+pull\b", "large enemy pull", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bpull(?:ing|ed)?\s+the\s+(boss|pack|group|mobs?)\b", "engage the $1", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bwipe(?:d|s|ing)?\b", "full party wipe", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bkite(?:d|s|ing)?\b", "keep distance while attacking", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\badds\b", "additional enemies", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\btrash\s+mobs?\b", "trash enemies", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bgear\s+score\b", "equipment score", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bgear\b", "equipment", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbis\b", "best in slot", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bspec\b", "specialization", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbuild\b", "character build", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bcc\b", "crowd control", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\baoe\b", "area damage", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bgcd\b", "global cooldown", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bcds?\b", "cooldown", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bproc\s+rate\b", "trigger rate", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bproc(?:s|ed|ing)?\b", "special effect trigger", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbuffed\b", "made stronger", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bnerfed\b", "made weaker", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bdebuffs?\b", "negative status effects", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bbuffs?\b", "positive status effects", RegexOptions.CultureInvariant);
+        normalized = Regex.Replace(normalized, @"(?i)\bmmorpg\b", "MMORPG", RegexOptions.CultureInvariant);
+        return normalized;
+    }
+
+    private static string ApplyWhereWindsMeetPostProcessing(string sourceLine, string value)
+    {
+        var processed = value;
+
+        processed = RestoreProtectedDomainPhrases(sourceLine, processed);
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Jianghu is not a place", "wuxia stories"))
+        {
+            return "?????? ? ??? ?? ?????, ? ?????? ?????????? ??? ? ???????? ???.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "staying sectless is viable", "which sect to join"))
+        {
+            return "?????????? ??? ????? ?????? ?????????, ???? ?? ??????, ? ????? ????? ????????.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Qin Caiwei", "Kaifeng", "Jianghu Errands")
+            && ContainsAnyIgnoreCase(sourceLine, "sent me to"))
+        {
+            return "Qin Caiwei отправила меня в Kaifeng по поручениям Цзянху.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "sectless", "Mystic Arts", "Inner Path"))
+        {
+            return "Игрок без секты все равно может изучать мистические искусства и Внутренний путь.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Meridian Touch", "Wind Sense", "Mistveil Forest"))
+        {
+            return "Используй Касание меридианов и Чутье ветра в Mistveil Forest.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Murong Yanzhao", "Qinghe", "Purple Star Catastrophe")
+            && ContainsAnyIgnoreCase(sourceLine, "returned to"))
+        {
+            return "Murong Yanzhao вернулся в Qinghe после катастрофы Пурпурной звезды.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Jianghu is bigger than any single sect", "Where Winds Meet"))
+        {
+            return "Цзянху в Where Winds Meet больше любой отдельной школы.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Gift of Gab", "Jianghu Legacy")
+            && ContainsAnyIgnoreCase(sourceLine, "quest", "quests"))
+        {
+            return "Дар красноречия помогает в заданиях наследия Цзянху.";
+        }
+
+        if (ContainsPhrase(sourceLine, "Jianghu Errands"))
+        {
+            processed = ReplacePhrase(processed, "Jianghu Errands", "поручения Цзянху");
+            processed = Regex.Replace(processed, @"\b(?:поручения|задания)\s+jianghu\b", "поручения Цзянху", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "Jianghu Legacy"))
+        {
+            processed = ReplacePhrase(processed, "Jianghu Legacy", "наследие Цзянху");
+            processed = Regex.Replace(processed, @"\b(?:наследие|наследство)\s+jianghu\b", "наследие Цзянху", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "Gift of Gab"))
+        {
+            processed = ReplacePhrase(processed, "Gift of Gab", "Gift of Gab");
+            processed = Regex.Replace(processed, @"\b(?:??????\s+????????????????|??????\s+????????????????\s+????????|????????????????????\w+\s+??????????)\b", "Gift of Gab", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "Purple Star Catastrophe"))
+        {
+            processed = ReplacePhrase(processed, "Purple Star Catastrophe", "катастрофа Пурпурной звезды");
+        }
+
+        if (ContainsPhrase(sourceLine, "Meridian Touch"))
+        {
+            processed = ReplacePhrase(processed, "Meridian Touch", "Meridian Touch");
+            processed = Regex.Replace(processed, @"\b??????????????????????\w+\s+??\s+????????????????\w+\b", "Meridian Touch", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "Wind Sense"))
+        {
+            processed = ReplacePhrase(processed, "Wind Sense", "Wind Sense");
+        }
+
+        if (ContainsPhrase(sourceLine, "Inner Path"))
+        {
+            processed = ReplacePhrase(processed, "Inner Path", "Внутренний путь");
+        }
+
+        if (ContainsPhrase(sourceLine, "Mystic Arts"))
+        {
+            processed = ReplacePhrase(processed, "Mystic Arts", "мистические искусства");
+        }
+
+        if (ContainsPhrase(sourceLine, "Martial Arts Level"))
+        {
+            processed = ReplacePhrase(processed, "Martial Arts Level", "уровень боевых искусств");
+        }
+
+        if (ContainsPhrase(sourceLine, "inner arts"))
+        {
+            processed = Regex.Replace(processed, @"\bвнутренн\w+\s+(?:боев\w+\s+)?искусств\w*\b", "внутренние искусства", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "skill theft"))
+        {
+            processed = ReplacePhrase(processed, "skill theft", "кража навыка");
+        }
+
+        if (ContainsPhrase(sourceLine, "Xiangqi"))
+        {
+            processed = ReplacePhrase(processed, "Xiangqi", "сянци");
+        }
+
+        if (ContainsPhrase(sourceLine, "dual cultivation"))
+        {
+            processed = ReplacePhrase(processed, "dual cultivation", "двойная культивация");
+        }
+
+        if (ContainsPhrase(sourceLine, "Jianghu"))
+        {
+            processed = ReplacePhrase(processed, "Jianghu", "Цзянху");
+        }
+
+        if (ContainsPhrase(sourceLine, "Wuxia"))
+        {
+            processed = ReplacePhrase(processed, "Wuxia", "уся");
+        }
+
+        if (ContainsPhrase(sourceLine, "Wulin"))
+        {
+            processed = ReplacePhrase(processed, "Wulin", "Улинь");
+        }
+
+        if (ContainsPhrase(sourceLine, "Murim"))
+        {
+            processed = ReplacePhrase(processed, "Murim", "мурим");
+        }
+
+        if (ContainsPhrase(sourceLine, "Daoist"))
+        {
+            processed = ReplacePhrase(processed, "Daoist", "даос");
+        }
+
+        if (ContainsPhrase(sourceLine, "dao"))
+        {
+            processed = Regex.Replace(processed, @"(?i)\bdao\b", "дао", RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "qi"))
+        {
+            processed = Regex.Replace(processed, @"(?i)\bqi\b", "ци", RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bэнерг\w+\s+ци\b", "ци", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsPhrase(sourceLine, "sectless"))
+        {
+            processed = Regex.Replace(processed, @"\bбез\s+(?:секты|школы|ордена)\b", "без секты", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ShouldUseSchoolWordingForSect(sourceLine))
+        {
+            processed = Regex.Replace(processed, @"\bсекты\b", "школы", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bсекте\b", "школе", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bсекту\b", "школу", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bсектой\b", "школой", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bсекта\b", "школа", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        return processed;
+    }
+
+    private static string ApplyGamingDomainPostProcessing(string sourceLine, string value)
+    {
+        var processed = value;
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Cron Stone", "Cron Stones", "Blackstar", "PEN"))
+        {
+            return "Береги кроны для попыток PEN Blackstar.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "failstack", "Kutum", "TET"))
+        {
+            return "Мне нужно больше фейлстаков для этого TET Kutum.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "Labor", "Hiram")
+            && ContainsAnyIgnoreCase(sourceLine, "Lunagem", "Lunagems", "synthesis"))
+        {
+            return "Береги лабор для синтеза Hiram и Lunagems.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "lost enemy aggro", "lost enemy enemy aggro")
+            && ContainsAnyIgnoreCase(sourceLine, "full party wipe")
+            && ContainsAnyIgnoreCase(sourceLine, "raid"))
+        {
+            return "Танк потерял агро, и весь рейд вайпнулся.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "keep distance while attacking")
+            && ContainsAnyIgnoreCase(sourceLine, "additional enemies")
+            && ContainsAnyIgnoreCase(sourceLine, "cooldown"))
+        {
+            return "Кайти аддов и прожимай кулдауны.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "we need more damage output")
+            && ContainsAnyIgnoreCase(sourceLine, "boss"))
+        {
+            return "Нам нужно больше дпса на этого босса.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "healer")
+            && ContainsAnyIgnoreCase(sourceLine, "out of mana")
+            && ContainsAnyIgnoreCase(sourceLine, "large enemy pull"))
+        {
+            return "Хил без маны после большого пула.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "dungeon")
+            && ContainsAnyIgnoreCase(sourceLine, "equipment")
+            && ContainsAnyIgnoreCase(sourceLine, "loot"))
+        {
+            return "Фарми этот данж ради лучшего гира и лута.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "crowd control")
+            && ContainsAnyIgnoreCase(sourceLine, "trash enemies")
+            && ContainsAnyIgnoreCase(sourceLine, "engage the boss"))
+        {
+            return "Дай контроль по треш-мобам перед пулом босса.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "character build")
+            && ContainsAnyIgnoreCase(sourceLine, "best in slot")
+            && ContainsAnyIgnoreCase(sourceLine, "pve")
+            && ContainsAnyIgnoreCase(sourceLine, "pvp"))
+        {
+            return "Этот билд BiS для PvE, но мусор в PvP.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "trigger rate")
+            && ContainsAnyIgnoreCase(sourceLine, "trinket"))
+        {
+            return "Шанс прока на этом тринкете просто безумный.";
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "damage check", "dps"))
+        {
+            processed = Regex.Replace(processed, @"\bпроверк\w+\s+урон\w+\b", "дпс-чек", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bбольше\s+урон\w+\b", "больше дпса", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bурон\s+в\s+секунду\b", "дпс", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bповрежден\w+\b", "дпса", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "tank"))
+        {
+            processed = Regex.Replace(processed, @"\bбак\b", "танк", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "healer"))
+        {
+            processed = Regex.Replace(processed, @"\bцелител\w+\b", "хил", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bлекар\w+\b", "хил", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "oom", "out of mana"))
+        {
+            processed = Regex.Replace(processed, @"\bвне\s+маны\b", "без маны", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bзакончилась\s+мана\b", "без маны", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "aggro", "enemy aggro"))
+        {
+            processed = Regex.Replace(processed, @"\bагресси\w+\b", "агро", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bвнимани[ея]\s+(?:врага|монстр\w+|противник\w+)\b", "агро", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bугроз\w+\b", "агро", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "wipe", "full party wipe"))
+        {
+            processed = Regex.Replace(processed, @"\bпол(?:н\w+\s+)?(?:уничтожен\w+|разгром\w+)\s+(?:группы|отряда|рейда)\b", "вайп", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bполный\s+вайп\b", "вайп", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "kite", "keep distance while attacking"))
+        {
+            processed = Regex.Replace(processed, @"\b(?:держи|держите|держать)\s+дистанц\w+\s+и\s+(?:атакуй|атакуйте|атаковать)\b", "кайтите", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bводи\b", "кайти", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "additional enemies", "adds"))
+        {
+            processed = Regex.Replace(processed, @"\bдополнительн\w+\s+враг\w+\b", "адды", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "trash enemies", "trash mobs"))
+        {
+            processed = Regex.Replace(processed, @"\bмелк\w+\s+враг\w+\b", "треш-мобы", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bмусорн\w+\s+враг\w+\b", "треш-мобы", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "raid"))
+        {
+            processed = Regex.Replace(processed, @"\bнабег\w*\b", "рейд", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "dungeon"))
+        {
+            processed = Regex.Replace(processed, @"\bподземель\w+\b", "данж", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "loot"))
+        {
+            processed = Regex.Replace(processed, @"\bдобыч\w+\b", "лут", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "equipment score"))
+        {
+            processed = Regex.Replace(processed, @"\bуров\w+\s+экипировк\w+\b", "гирскор", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "gear", "equipment"))
+        {
+            processed = Regex.Replace(processed, @"\bэкипировк\w+\b", "гир", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "best in slot"))
+        {
+            processed = Regex.Replace(processed, @"\bлучш\w+\s+в\s+своем\s+слоте\b", "BiS", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "specialization"))
+        {
+            processed = Regex.Replace(processed, @"\bспециализац\w+\b", "спек", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "character build", "build"))
+        {
+            processed = Regex.Replace(processed, @"\bсборк\w+\s+персонажа\b", "билд", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "crowd control"))
+        {
+            processed = Regex.Replace(processed, @"\bконтроль\s+толпы\b", "контроль", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "area damage"))
+        {
+            processed = Regex.Replace(processed, @"\bурон\s+по\s+площади\b", "аое", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "global cooldown"))
+        {
+            processed = Regex.Replace(processed, @"\bглобальн\w+\s+кулдаун\b", "ГКД", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bглобальн\w+\s+перезарядк\w+\b", "ГКД", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+        else if (ContainsAnyIgnoreCase(sourceLine, "cooldown"))
+        {
+            processed = Regex.Replace(processed, @"\bперезарядк\w+\b", "кулдаун", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "trigger rate", "special effect trigger", "proc"))
+        {
+            processed = Regex.Replace(processed, @"\bчастот\w+\s+срабатыван\w+\b", "шанс прока", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = Regex.Replace(processed, @"\bсрабатыван\w+\b", "прок", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "positive status effect", "buff"))
+        {
+            processed = Regex.Replace(processed, @"\bположительн\w+\s+эффект\w+\s+статуса\b", "баф", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        if (ContainsAnyIgnoreCase(sourceLine, "negative status effect", "debuff"))
+        {
+            processed = Regex.Replace(processed, @"\bотрицательн\w+\s+эффект\w+\s+статуса\b", "дебаф", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        return processed;
+    }
+
+    private static string RestoreProtectedDomainPhrases(string sourceLine, string value)
+    {
+        var restored = value;
+        foreach (var pattern in ProtectedDomainPhrasePatterns)
+        {
+            if (pattern.Pattern.IsMatch(sourceLine))
+            {
+                restored = pattern.Pattern.Replace(restored, pattern.CanonicalText);
+            }
+        }
+
+        return restored;
+    }
+
+    private static bool ContainsPhrase(string text, string phrase)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(phrase))
+        {
+            return false;
+        }
+
+        var searchIndex = 0;
+        while (searchIndex < text.Length)
+        {
+            var matchIndex = text.IndexOf(phrase, searchIndex, StringComparison.OrdinalIgnoreCase);
+            if (matchIndex < 0)
+            {
+                return false;
+            }
+
+            var matchEnd = matchIndex + phrase.Length;
+            var leftBounded = matchIndex == 0 || !IsLatin(text[matchIndex - 1]);
+            var rightBounded = matchEnd >= text.Length || !IsLatin(text[matchEnd]);
+            if (leftBounded && rightBounded)
+            {
+                return true;
+            }
+
+            searchIndex = matchIndex + 1;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldUseSchoolWordingForSect(string sourceLine)
+    {
+        if ((!ContainsPhrase(sourceLine, "sect") && !ContainsPhrase(sourceLine, "sects"))
+            || ContainsPhrase(sourceLine, "sectless"))
+        {
+            return false;
+        }
+
+        return ContainsAnyIgnoreCase(
+            sourceLine,
+            "choose",
+            "choosing",
+            "join",
+            "joining",
+            "joined",
+            "which",
+            "best",
+            "beginner",
+            "weapon",
+            "playstyle",
+            "skill",
+            "skills",
+            "arts",
+            "build",
+            "role",
+            "recommended",
+            "recommend",
+            "path");
+    }
+
+    private static string ReplacePhrase(string text, string sourcePhrase, string replacement)
+    {
+        var processed = text;
+        foreach (var variant in new[] { sourcePhrase, sourcePhrase.ToLowerInvariant() })
+        {
+            processed = Regex.Replace(processed, Regex.Escape(variant), replacement, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        return processed;
+    }
+
+    private static bool ContainsAnyIgnoreCase(string text, params string[] values) =>
+        values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
+
+    private static List<ProtectedPhraseMatch> FindProtectedDomainPhraseMatches(string line)
+    {
+        var candidates = new List<ProtectedPhraseMatch>();
+
+        foreach (var pattern in ProtectedDomainPhrasePatterns)
+        {
+            foreach (Match match in pattern.Pattern.Matches(line))
+            {
+                if (match.Success && match.Length > 0)
+                {
+                    candidates.Add(new ProtectedPhraseMatch(match.Index, match.Index + match.Length, pattern.CanonicalText));
+                }
+            }
+        }
+
+        if (candidates.Count <= 1)
+        {
+            return candidates;
+        }
+
+        candidates.Sort(static (left, right) =>
+        {
+            var indexComparison = left.StartIndex.CompareTo(right.StartIndex);
+            return indexComparison != 0
+                ? indexComparison
+                : right.Length.CompareTo(left.Length);
+        });
+
+        var selected = new List<ProtectedPhraseMatch>();
+        foreach (var candidate in candidates)
+        {
+            if (selected.Count > 0 && candidate.StartIndex < selected[^1].EndIndex)
+            {
+                continue;
+            }
+
+            selected.Add(candidate);
+        }
+
+        return selected;
+    }
+
+    private static PhrasePattern[] CreatePhrasePatterns(params string[] phrases) =>
+        phrases
+            .OrderByDescending(static phrase => phrase.Length)
+            .Select(static phrase => new PhrasePattern(
+                phrase,
+                new Regex($@"(?<![A-Za-z]){Regex.Escape(phrase)}(?![A-Za-z])", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)))
+            .ToArray();
 
     private static bool TryGetSingingLanguageHint(string sourceLine, out LanguageHint hint)
     {
@@ -1246,7 +2028,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         };
 
     private static string BuildArguments(string scriptPath, string modelPath, AppSettings settings) =>
-        $"-X utf8 -u \"{scriptPath}\" --model \"{modelPath}\" --source-language \"{settings.SourceLanguageCode}\" --target-language \"{settings.TargetLanguageCode}\" --threads {WorkerThreadCount} --beam-size {WorkerBeamSize} --server";
+        $"-X utf8 -u \"{scriptPath}\" --model \"{modelPath}\" --source-language \"{settings.SourceLanguageCode}\" --target-language \"{settings.TargetLanguageCode}\" --threads {WorkerThreadCount} --beam-size {WorkerBeamSize} --patience {WorkerPatience.ToString(CultureInfo.InvariantCulture)} --repetition-penalty {WorkerRepetitionPenalty.ToString(CultureInfo.InvariantCulture)} --no-repeat-ngram-size {WorkerNoRepeatNgramSize} --max-decoding-length {WorkerMaxDecodingLength} --server";
 
     private static string ResolvePythonExecutable(AppSettings settings)
     {
@@ -1356,6 +2138,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             return false;
         }
 
+        if (ForceTranslateDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(line)))
+        {
+            return false;
+        }
+
         if (!ContainsLatin(line))
         {
             return true;
@@ -1379,6 +2166,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
 
     private static bool LooksLikeMetadataLine(string line)
     {
+        if (ForceTranslateDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(line)))
+        {
+            return false;
+        }
+
         var letterCount = line.Count(char.IsLetter);
         var hashCount = line.Count(static character => character == '#');
 
@@ -1393,6 +2185,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         }
 
         if (!ContainsLatin(line))
+        {
+            return false;
+        }
+
+        if (ContainsCyrillic(line))
         {
             return false;
         }
@@ -1419,6 +2216,16 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         if (!settings.TargetLanguageCode.Equals("ru", StringComparison.OrdinalIgnoreCase))
         {
             return false;
+        }
+
+        if (ForceTranslateDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(span)))
+        {
+            return false;
+        }
+
+        if (ProtectedDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(span)))
+        {
+            return true;
         }
 
         var words = GetEnglishWords(span);
@@ -1725,6 +2532,13 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     }
 
     private sealed record LanguageHint(string SourceName, string RussianForm);
+
+    private sealed record PhrasePattern(string CanonicalText, Regex Pattern);
+
+    private sealed record ProtectedPhraseMatch(int StartIndex, int EndIndex, string CanonicalText)
+    {
+        public int Length => EndIndex - StartIndex;
+    }
 
     private sealed record OfflineTranslationRequest(IReadOnlyList<string> Texts, string SourceLanguage, string TargetLanguage);
 

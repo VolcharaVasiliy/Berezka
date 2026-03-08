@@ -43,7 +43,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-language", default="en")
     parser.add_argument("--target-language", default="ru")
     parser.add_argument("--threads", type=int, default=1)
-    parser.add_argument("--beam-size", type=int, default=3)
+    parser.add_argument("--beam-size", type=int, default=2)
+    parser.add_argument("--patience", type=float, default=1.0)
+    parser.add_argument("--repetition-penalty", type=float, default=1.0)
+    parser.add_argument("--no-repeat-ngram-size", type=int, default=0)
+    parser.add_argument("--max-decoding-length", type=int, default=256)
+    parser.add_argument("--replace-unknowns", action="store_true")
+    parser.add_argument("--disable-unk", action="store_true")
     parser.add_argument("--server", action="store_true")
     return parser.parse_args()
 
@@ -118,7 +124,13 @@ def translate_texts(
             token_batches,
             target_prefix=target_prefix,
             beam_size=max(1, args.beam_size),
+            patience=max(1.0, args.patience),
             max_batch_size=max(1, min(len(token_batches), 8)),
+            repetition_penalty=max(1.0, args.repetition_penalty),
+            no_repeat_ngram_size=max(0, args.no_repeat_ngram_size),
+            max_decoding_length=max(32, args.max_decoding_length),
+            replace_unknowns=args.replace_unknowns,
+            disable_unk=args.disable_unk,
         )
 
         for result_index, translation_result in enumerate(translation_results):
