@@ -4,7 +4,7 @@ param(
     [string]$Tag = "v0.1.0",
     [string]$RuntimeIdentifier = "win-x64",
     [string]$Owner = "VolcharaVasiliy",
-    [string]$Repository = "elochka-rewrite",
+    [string]$Repository = "Berezka",
     [string]$ReleaseArchivePath,
     [string]$DownloadUrl,
     [string]$SevenZipExe = "F:\DevTools\ZipTools\7zip\7z.exe",

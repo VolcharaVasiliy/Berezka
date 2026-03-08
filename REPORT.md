@@ -43,9 +43,9 @@
 - The next quality ceiling was not beam search but domain language: MMO jargon like `aggro`, `wipe`, `adds`, `oom`, `pull`, `BiS`, and `proc rate` was still collapsing into literal Russian. That required a domain glossary layer on top of the model, not just another decoder tweak.
 
 ## Issues
-- The GitHub repository name and release download base still point to `VolcharaVasiliy/elochka-rewrite`; this was not changed because the repository itself has not been renamed.
 - `scripts/build_installer.ps1` was first launched in parallel with `build_release.ps1` and failed because the `release` folder did not exist yet; rerunning it after the archive build succeeded.
 - Raw NLLB quality is still limited on niche slang and names; the latest pass improves this with cheaper decode settings and targeted phrase normalization, not by switching to a heavier model.
+- GitHub later confirmed that the repository moved to `VolcharaVasiliy/Berezka`, so installer/release links must now target the new slug instead of the legacy `elochka-rewrite` redirect.
 
 ## Functions
 - `CreateHotKeyMenuItem` (`Berezka.App/Application/BerezkaApplicationContext.cs`) - builds the tray submenu for hotkey selection.
@@ -79,6 +79,12 @@
 ## Verification - Domain glossary
 - Web review of Reddit/community and public guide pages for the four target games.
 - File review: `F:\Projects\berezka\docs\translation-domain-glossary.md`
+
+## Task Update - 2026-03-09 GitHub repo move alignment
+- GitHub push confirmed the repository now lives at `https://github.com/VolcharaVasiliy/Berezka`.
+- Updated the local git remote to the new slug.
+- Updated `scripts/build_installer.ps1` so future installer manifests default to `Repository = "Berezka"` instead of the legacy slug.
+- Rebuilt installer metadata against the new repository location so release/download links no longer rely on redirect behavior.
 
 ## Verification
 - `dotnet build F:\Projects\berezka\Berezka.sln`
