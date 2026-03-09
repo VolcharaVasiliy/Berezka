@@ -168,3 +168,20 @@
 - Smoke test:
   - `release\\berezka-v0.1.4-win-x64\\Berezka.App.exe`
   - `release\\Berezka.Setup-v0.1.4-win-x64.exe`
+
+## Task Update - 2026-03-09 Berezka v0.1.4 push and GitHub release
+- Committed glossary/runtime/release updates in `F:\Projects\berezka` as commit `e6bb2b6` (`Add open glossary runtime data for slang and MMO terms`).
+- Pushed `main` to `origin` and published tag `v0.1.4`.
+- Created GitHub release without assets at `https://github.com/VolcharaVasiliy/Berezka/releases/tag/v0.1.4`.
+- Left release assets local only as requested:
+  - `F:\Projects\berezka\release\berezka-v0.1.4-win-x64_7z_lzma2_mx5_solid.7z`
+  - `F:\Projects\berezka\release\Berezka.Setup-v0.1.4-win-x64.exe`
+
+## Verification - 2026-03-09 Berezka v0.1.4 push and GitHub release
+- `F:\DevTools\Portable\MinGit\cmd\git.exe -C F:\Projects\berezka push origin main`
+- `F:\DevTools\Portable\MinGit\cmd\git.exe -C F:\Projects\berezka tag -a v0.1.4 -m "Berezka v0.1.4"`
+- `F:\DevTools\Portable\MinGit\cmd\git.exe -C F:\Projects\berezka push origin v0.1.4`
+- GitHub API verification:
+  - release URL: `https://github.com/VolcharaVasiliy/Berezka/releases/tag/v0.1.4`
+  - asset count: `0`
+  - repo status: clean after push
