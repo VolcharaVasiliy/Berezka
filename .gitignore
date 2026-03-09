@@ -4,6 +4,7 @@
 
 # Local runtime and generated caches
 .tmp/
+.cache/
 .paddle-home/
 .paddlex-cache/
 .hf-home/

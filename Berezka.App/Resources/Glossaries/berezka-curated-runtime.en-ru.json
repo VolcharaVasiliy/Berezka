@@ -1,0 +1,993 @@
+{
+  "name": "Berezka curated runtime glossary",
+  "source": "Berezka Curated",
+  "entryCount": 83,
+  "entries": [
+    {
+      "source": "drunken flowers sect",
+      "target": "Drunken Flowers Sect",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "sect"
+      ],
+      "priority": 170,
+      "normalizedSource": "drunken flowers sect",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "jiuliu sect",
+      "target": "Jiuliu Sect",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "sect"
+      ],
+      "priority": 170,
+      "normalizedSource": "jiuliu sect",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "kuanglan sect",
+      "target": "Kuanglan Sect",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "sect"
+      ],
+      "priority": 170,
+      "normalizedSource": "kuanglan sect",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "liyuan sect",
+      "target": "Liyuan Sect",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "sect"
+      ],
+      "priority": 170,
+      "normalizedSource": "liyuan sect",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "lonely cloud sect",
+      "target": "Lonely Cloud Sect",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "sect"
+      ],
+      "priority": 170,
+      "normalizedSource": "lonely cloud sect",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "murong yanzhao",
+      "target": "Murong Yanzhao",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "murong yanzhao",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "murong yuan",
+      "target": "Murong Yuan",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "murong yuan",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "officer nan",
+      "target": "Officer Nan",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "officer nan",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "qi sheng",
+      "target": "Qi Sheng",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "qi sheng",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "qin caiwei",
+      "target": "Qin Caiwei",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "qin caiwei",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "shen weiqing",
+      "target": "Shen Weiqing",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "shen weiqing",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "shi zhen",
+      "target": "Shi Zhen",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "shi zhen",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "song wu",
+      "target": "Song Wu",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "song wu",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "zhai xu",
+      "target": "Zhai Xu",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "character"
+      ],
+      "priority": 170,
+      "normalizedSource": "zhai xu",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "aureate pavilion",
+      "target": "Aureate Pavilion",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "aureate pavilion",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "ghost revelry hall",
+      "target": "Ghost Revelry Hall",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "ghost revelry hall",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "heartless valley",
+      "target": "Heartless Valley",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "heartless valley",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "hollow abode",
+      "target": "Hollow Abode",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "hollow abode",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "jadewood court",
+      "target": "Jadewood Court",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "jadewood court",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "kaifeng",
+      "target": "Kaifeng",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "kaifeng",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "martial temple",
+      "target": "Martial Temple",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "martial temple",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "mistveil city",
+      "target": "Mistveil City",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "mistveil city",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "mistveil forest",
+      "target": "Mistveil Forest",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "mistveil forest",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "qinghe",
+      "target": "Qinghe",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "qinghe",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "taiping mausoleum",
+      "target": "Taiping Mausoleum",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "taiping mausoleum",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wenjin pavilion",
+      "target": "Wenjin Pavilion",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "wenjin pavilion",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wishing cove",
+      "target": "Wishing Cove",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "location"
+      ],
+      "priority": 160,
+      "normalizedSource": "wishing cove",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "cloud mail",
+      "target": "облачная почта",
+      "action": "translate",
+      "domains": [
+        "ui"
+      ],
+      "priority": 140,
+      "normalizedSource": "cloud mail",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "cultivation",
+      "target": "культивация",
+      "action": "translate",
+      "domains": [
+        "ui",
+        "wuxia"
+      ],
+      "priority": 140,
+      "normalizedSource": "cultivation",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "exploration outfit",
+      "target": "костюм исследователя",
+      "action": "translate",
+      "domains": [
+        "ui"
+      ],
+      "priority": 140,
+      "normalizedSource": "exploration outfit",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "meridian touch",
+      "target": "Meridian Touch",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "skill"
+      ],
+      "priority": 140,
+      "normalizedSource": "meridian touch",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "reward highlights",
+      "target": "основные награды",
+      "action": "translate",
+      "domains": [
+        "ui"
+      ],
+      "priority": 140,
+      "normalizedSource": "reward highlights",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wind sense",
+      "target": "Wind Sense",
+      "action": "preserve",
+      "domains": [
+        "wwm",
+        "skill"
+      ],
+      "priority": 140,
+      "normalizedSource": "wind sense",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "dao",
+      "target": "дао",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "dao",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "gift of gab",
+      "target": "дар красноречия",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "gift of gab",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "inner path",
+      "target": "Внутренний путь",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "inner path",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "jianghu",
+      "target": "Цзянху",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "jianghu",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "jianghu errands",
+      "target": "поручения Цзянху",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "jianghu errands",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "jianghu legacy",
+      "target": "наследие Цзянху",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "jianghu legacy",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "martial arts level",
+      "target": "уровень боевых искусств",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "martial arts level",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "murim",
+      "target": "мурим",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "murim",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "mystic arts",
+      "target": "мистические искусства",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "mystic arts",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "purple star catastrophe",
+      "target": "катастрофа Пурпурной звезды",
+      "action": "translate",
+      "domains": [
+        "wwm"
+      ],
+      "priority": 130,
+      "normalizedSource": "purple star catastrophe",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "qi",
+      "target": "ци",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "qi",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "sectless",
+      "target": "без секты",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "sectless",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wulin",
+      "target": "улинь",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "wulin",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wuxia",
+      "target": "уся",
+      "action": "translate",
+      "domains": [
+        "wwm",
+        "wuxia"
+      ],
+      "priority": 130,
+      "normalizedSource": "wuxia",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "adds",
+      "target": "адды",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "adds",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "aggro",
+      "target": "агро",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "aggro",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "buff",
+      "target": "баф",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "buff",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "cooldown",
+      "target": "кулдаун",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "cooldown",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "cooldowns",
+      "target": "кулдауны",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "cooldowns",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "debuff",
+      "target": "дебаф",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "debuff",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "kite",
+      "target": "кайтить",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "kite",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "kiting",
+      "target": "кайтинг",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "kiting",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "proc",
+      "target": "прок",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "proc",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wipe",
+      "target": "вайп",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "wipe",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "wiped",
+      "target": "вайпнулся",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 120,
+      "normalizedSource": "wiped",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "build",
+      "target": "билд",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "build",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "dungeon",
+      "target": "данж",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "dungeon",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "farm",
+      "target": "фарм",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "farm",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "gear",
+      "target": "гир",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "gear",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "grind",
+      "target": "гринд",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "grind",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "loot",
+      "target": "лут",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "loot",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "nerf",
+      "target": "нерф",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 110,
+      "normalizedSource": "nerf",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "nerfed",
+      "target": "понерфили",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 110,
+      "normalizedSource": "nerfed",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "noob",
+      "target": "нуб",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 110,
+      "normalizedSource": "noob",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "raid",
+      "target": "рейд",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "raid",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "spec",
+      "target": "спек",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "spec",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "world boss",
+      "target": "ворлд-босс",
+      "action": "translate",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 110,
+      "normalizedSource": "world boss",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "bis",
+      "target": "BiS",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "bis",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "dps",
+      "target": "DPS",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "dps",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "gg",
+      "target": "GG",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 100,
+      "normalizedSource": "gg",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "ggs",
+      "target": "GGs",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 100,
+      "normalizedSource": "ggs",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "good game",
+      "target": "GG",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 100,
+      "normalizedSource": "good game",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "gvg",
+      "target": "GvG",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "gvg",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "lfm",
+      "target": "LFM",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "lfm",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "lfp",
+      "target": "LFP",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "lfp",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "lfr",
+      "target": "LFR",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "lfr",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "pve",
+      "target": "PvE",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "pve",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "pvp",
+      "target": "PvP",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "mmo"
+      ],
+      "priority": 100,
+      "normalizedSource": "pvp",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "ftw",
+      "target": "FTW",
+      "action": "preserve",
+      "domains": [
+        "internet",
+        "slang"
+      ],
+      "priority": 90,
+      "normalizedSource": "ftw",
+      "sourceDatabase": "Berezka Curated"
+    },
+    {
+      "source": "qol",
+      "target": "QoL",
+      "action": "preserve",
+      "domains": [
+        "gaming",
+        "internet"
+      ],
+      "priority": 90,
+      "normalizedSource": "qol",
+      "sourceDatabase": "Berezka Curated"
+    }
+  ]
+}

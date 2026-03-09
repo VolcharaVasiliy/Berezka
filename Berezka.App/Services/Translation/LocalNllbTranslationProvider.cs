@@ -56,8 +56,15 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     private static readonly Regex CollaborationRegex = new(@"(?i)\bcollab\b", RegexOptions.Compiled);
     private static readonly Regex WithSlashRegex = new(@"(?i)\bw/\b", RegexOptions.Compiled);
     private static readonly Regex MetadataKeywordRegex = new(@"(?i)\b(?:ft|feat|featuring|prod|remix|cover|ost|op|ed|amv|mv|pv|ver|version|lyrics?)\.?\b", RegexOptions.Compiled);
+    private static readonly Regex PreservingMetadataKeywordRegex = new(@"(?i)\b(?:ft|feat|featuring|prod|remix|cover|ost|op|ed|amv|mv|pv|ver|collab)\.?\b", RegexOptions.Compiled);
     private static readonly Regex UiActionLineRegex = new(@"^\s*(?:\u041F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438\s+\u043D\u0430\s+\u0440\u0443\u0441\u0441\u043A\u0438\u0439|\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C|\u0438\u0437\u043C\u0435\u043D\u0435\u043D\u043E|Translate\s+to\s+Russian|Reply|edited)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex EngagementNoiseLineRegex = new(@"^\s*[@#©®&%\d\s\-\—\.,;:()\[\]\{\}/|<>!?]+\s*(?:\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C|Reply)?\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex DynamicNamedLocationRegex = new(
+        @"(?<![A-Za-z])(?:[A-Z][A-Za-z]+(?:[-'][A-Z][A-Za-z]+)?\s+){1,4}(?:Temple|Mausoleum|Village|Hamlet|Town|City|Forest|Court|Hall|Pavilion|Valley|Palace|Shrine|Monastery|Sanctum|Pagoda|Peak|Pass|Inn|River|Lake|Harbor|Harbour|Garden|Camp|Manor|Bridge|Cove|Abode|Ruins|Fort|Keep|Outpost|Market|Bazaar|Marsh|Swamp|Mountain|Mount|Cliff|Island|Gorge|Ridge)(?![A-Za-z])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex DynamicTitledNameRegex = new(
+        @"(?<![A-Za-z])(?:Officer|Master|Elder|General|Commander|Captain|Lord|Lady|Scholar)\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,2}(?![A-Za-z])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex MetalheadSingularRegex = new(@"(?i)\bmetalhead\b", RegexOptions.Compiled);
     private static readonly Regex MetalheadPluralRegex = new(@"(?i)\bmetalheads\b", RegexOptions.Compiled);
     private static readonly Regex ContractionlessWordRegex = new(@"(?i)\b(im|ive|ill|id|dont|cant|wont|didnt|doesnt|isnt|arent|wasnt|werent|shouldnt|couldnt|wouldnt|thats|theres|theyre|youre|weve|theyve|youve|hes|shes|lets|itll|theyll|we'll|i'm|i've)\b", RegexOptions.Compiled);
@@ -297,6 +304,8 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             return string.Empty;
         }
 
+        _ = TranslationGlossaryRuntime.Default;
+
         var plans = BuildLinePlans(sourceText, settings);
         if (plans.Count == 0)
         {
@@ -376,6 +385,8 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     public async Task WarmUpAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
+
+        _ = TranslationGlossaryRuntime.Default;
 
         var pythonExecutable = ResolvePythonExecutable(settings);
         var scriptPath = ResolveScriptPath();
@@ -598,7 +609,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             }
 
             var joined = JoinTranslatedSegments(parts);
-            joined = PostProcessTranslation(plan.TranslationSourceLine ?? plan.OriginalLine, joined, settings);
+            joined = PostProcessTranslation(plan.OriginalLine, joined, settings);
             translatedLines.Add(string.IsNullOrWhiteSpace(joined) ? plan.RenderPreserved() : joined);
         }
 
@@ -708,6 +719,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     {
         var pieces = new List<LineTranslationPiece>();
         var lastIndex = 0;
+        var glossary = TranslationGlossaryRuntime.Default;
 
         foreach (Match match in EnglishSpanRegex.Matches(line))
         {
@@ -722,14 +734,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             }
 
             var span = match.Value;
-            if (ShouldPreserveEnglishSpan(span, line, match.Index, settings))
-            {
-                pieces.Add(LineTranslationPiece.Preserve(NormalizePreservedMetadataLine(span)));
-            }
-            else
-            {
-                pieces.Add(LineTranslationPiece.Translate(span, NormalizeSourceForTranslation(span, settings)));
-            }
+            pieces.AddRange(BuildPiecesForEnglishSpan(span, line, match.Index, settings, glossary));
 
             lastIndex = match.Index + match.Length;
         }
@@ -740,6 +745,94 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         }
 
         return pieces;
+    }
+
+    private static IEnumerable<LineTranslationPiece> BuildPiecesForEnglishSpan(
+        string span,
+        string fullLine,
+        int spanStartIndex,
+        AppSettings settings,
+        TranslationGlossaryRuntime glossary)
+    {
+        var matches = glossary.FindDirectMatches(span);
+        if (matches.Count == 0)
+        {
+            foreach (var piece in BuildPiecesForPlainEnglishSlice(span, fullLine, spanStartIndex, settings))
+            {
+                yield return piece;
+            }
+            yield break;
+        }
+
+        var cursor = 0;
+        foreach (var match in matches)
+        {
+            if (match.StartIndex > cursor)
+            {
+                foreach (var piece in BuildPiecesForPlainEnglishSlice(
+                    span[cursor..match.StartIndex],
+                    fullLine,
+                    spanStartIndex + cursor,
+                    settings))
+                {
+                    yield return piece;
+                }
+            }
+
+            yield return LineTranslationPiece.Preserve(match.RenderedText);
+            cursor = match.EndIndex;
+        }
+
+        if (cursor < span.Length)
+        {
+            foreach (var piece in BuildPiecesForPlainEnglishSlice(
+                span[cursor..],
+                fullLine,
+                spanStartIndex + cursor,
+                settings))
+            {
+                yield return piece;
+            }
+        }
+    }
+
+    private static IEnumerable<LineTranslationPiece> BuildPiecesForPlainEnglishSlice(
+        string span,
+        string fullLine,
+        int spanStartIndex,
+        AppSettings settings)
+    {
+        if (span.Length == 0)
+        {
+            yield break;
+        }
+
+        var leadingWhitespaceLength = span.TakeWhile(char.IsWhiteSpace).Count();
+        if (leadingWhitespaceLength > 0)
+        {
+            yield return LineTranslationPiece.Preserve(span[..leadingWhitespaceLength]);
+        }
+
+        var trailingWhitespaceLength = span.Reverse().TakeWhile(char.IsWhiteSpace).Count();
+        var coreStartIndex = leadingWhitespaceLength;
+        var coreLength = span.Length - leadingWhitespaceLength - trailingWhitespaceLength;
+        if (coreLength > 0)
+        {
+            var core = span.Substring(coreStartIndex, coreLength);
+            if (ShouldPreserveEnglishSpan(core, fullLine, spanStartIndex + coreStartIndex, settings))
+            {
+                yield return LineTranslationPiece.Preserve(NormalizePreservedMetadataLine(core));
+            }
+            else
+            {
+                yield return LineTranslationPiece.Translate(core, NormalizeSourceForTranslation(core, settings));
+            }
+        }
+
+        if (trailingWhitespaceLength > 0)
+        {
+            yield return LineTranslationPiece.Preserve(span[^trailingWhitespaceLength..]);
+        }
     }
 
     private static List<LineTranslationPiece> MergeAdjacentPieces(IReadOnlyList<LineTranslationPiece> pieces)
@@ -1015,6 +1108,32 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         }
 
         var processed = translation.Trim();
+
+        if (Regex.IsMatch(sourceLine, @"(?i)^\s*cultivation!?\s*$", RegexOptions.CultureInvariant))
+        {
+            return sourceLine.TrimEnd().EndsWith("!", StringComparison.Ordinal) ? "Культивация!" : "Культивация";
+        }
+
+        if (Regex.IsMatch(sourceLine, @"(?i)^\s*cloud\s+mail\s*$", RegexOptions.CultureInvariant))
+        {
+            return "Облачная почта";
+        }
+
+        var versionMatch = Regex.Match(sourceLine, @"(?i)^\s*version\s+([0-9][A-Za-z0-9\.\-]*)\s*$", RegexOptions.CultureInvariant);
+        if (versionMatch.Success)
+        {
+            return $"Версия {versionMatch.Groups[1].Value}";
+        }
+
+        if (Regex.IsMatch(sourceLine, @"(?i)^\s*reward\s+highlights\s*$", RegexOptions.CultureInvariant))
+        {
+            return "Основные награды";
+        }
+
+        if (Regex.IsMatch(sourceLine, @"(?i)^\s*exploration\s+outfit\s*$", RegexOptions.CultureInvariant))
+        {
+            return "Костюм исследователя";
+        }
 
         if (sourceLine.Contains("speechless", StringComparison.OrdinalIgnoreCase))
         {
@@ -1317,44 +1436,42 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
 
         processed = RestoreProtectedDomainPhrases(sourceLine, processed);
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Jianghu is not a place", "wuxia stories"))
+        if (ContainsAllIgnoreCase(sourceLine, "Jianghu is not a place", "wuxia stories"))
         {
             return "?????? ? ??? ?? ?????, ? ?????? ?????????? ??? ? ???????? ???.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "staying sectless is viable", "which sect to join"))
+        if (ContainsAllIgnoreCase(sourceLine, "staying sectless is viable", "which sect to join"))
         {
             return "?????????? ??? ????? ?????? ?????????, ???? ?? ??????, ? ????? ????? ????????.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Qin Caiwei", "Kaifeng", "Jianghu Errands")
-            && ContainsAnyIgnoreCase(sourceLine, "sent me to"))
+        if (ContainsAllIgnoreCase(sourceLine, "Qin Caiwei", "Kaifeng", "Jianghu Errands", "sent me to"))
         {
             return "Qin Caiwei отправила меня в Kaifeng по поручениям Цзянху.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "sectless", "Mystic Arts", "Inner Path"))
+        if (ContainsAllIgnoreCase(sourceLine, "sectless", "Mystic Arts", "Inner Path"))
         {
             return "Игрок без секты все равно может изучать мистические искусства и Внутренний путь.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Meridian Touch", "Wind Sense", "Mistveil Forest"))
+        if (ContainsAllIgnoreCase(sourceLine, "Meridian Touch", "Wind Sense", "Mistveil Forest"))
         {
             return "Используй Касание меридианов и Чутье ветра в Mistveil Forest.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Murong Yanzhao", "Qinghe", "Purple Star Catastrophe")
-            && ContainsAnyIgnoreCase(sourceLine, "returned to"))
+        if (ContainsAllIgnoreCase(sourceLine, "Murong Yanzhao", "Qinghe", "Purple Star Catastrophe", "returned to"))
         {
             return "Murong Yanzhao вернулся в Qinghe после катастрофы Пурпурной звезды.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Jianghu is bigger than any single sect", "Where Winds Meet"))
+        if (ContainsAllIgnoreCase(sourceLine, "Jianghu is bigger than any single sect", "Where Winds Meet"))
         {
             return "Цзянху в Where Winds Meet больше любой отдельной школы.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Gift of Gab", "Jianghu Legacy")
+        if (ContainsAllIgnoreCase(sourceLine, "Gift of Gab", "Jianghu Legacy")
             && ContainsAnyIgnoreCase(sourceLine, "quest", "quests"))
         {
             return "Дар красноречия помогает в заданиях наследия Цзянху.";
@@ -1374,8 +1491,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
 
         if (ContainsPhrase(sourceLine, "Gift of Gab"))
         {
-            processed = ReplacePhrase(processed, "Gift of Gab", "Gift of Gab");
-            processed = Regex.Replace(processed, @"\b(?:??????\s+????????????????|??????\s+????????????????\s+????????|????????????????????\w+\s+??????????)\b", "Gift of Gab", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            processed = ReplacePhrase(processed, "Gift of Gab", "дар красноречия");
         }
 
         if (ContainsPhrase(sourceLine, "Purple Star Catastrophe"))
@@ -1386,7 +1502,6 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         if (ContainsPhrase(sourceLine, "Meridian Touch"))
         {
             processed = ReplacePhrase(processed, "Meridian Touch", "Meridian Touch");
-            processed = Regex.Replace(processed, @"\b??????????????????????\w+\s+??\s+????????????????\w+\b", "Meridian Touch", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
         if (ContainsPhrase(sourceLine, "Wind Sense"))
@@ -1486,17 +1601,18 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     {
         var processed = value;
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Cron Stone", "Cron Stones", "Blackstar", "PEN"))
+        if (ContainsAnyIgnoreCase(sourceLine, "Cron Stone", "Cron Stones")
+            && ContainsAllIgnoreCase(sourceLine, "Blackstar", "attempt"))
         {
             return "Береги кроны для попыток PEN Blackstar.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "failstack", "Kutum", "TET"))
+        if (ContainsAllIgnoreCase(sourceLine, "failstack", "Kutum", "TET"))
         {
             return "Мне нужно больше фейлстаков для этого TET Kutum.";
         }
 
-        if (ContainsAnyIgnoreCase(sourceLine, "Labor", "Hiram")
+        if (ContainsAllIgnoreCase(sourceLine, "Labor", "Hiram")
             && ContainsAnyIgnoreCase(sourceLine, "Lunagem", "Lunagems", "synthesis"))
         {
             return "Береги лабор для синтеза Hiram и Lunagems.";
@@ -1779,6 +1895,9 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
     private static bool ContainsAnyIgnoreCase(string text, params string[] values) =>
         values.Any(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
 
+    private static bool ContainsAllIgnoreCase(string text, params string[] values) =>
+        values.All(value => text.Contains(value, StringComparison.OrdinalIgnoreCase));
+
     private static List<ProtectedPhraseMatch> FindProtectedDomainPhraseMatches(string line)
     {
         var candidates = new List<ProtectedPhraseMatch>();
@@ -1791,6 +1910,33 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
                 {
                     candidates.Add(new ProtectedPhraseMatch(match.Index, match.Index + match.Length, pattern.CanonicalText));
                 }
+            }
+        }
+
+        foreach (Match match in DynamicNamedLocationRegex.Matches(line))
+        {
+            if (match.Success && match.Length > 0)
+            {
+                candidates.Add(new ProtectedPhraseMatch(match.Index, match.Index + match.Length, match.Value));
+            }
+        }
+
+        foreach (Match match in DynamicTitledNameRegex.Matches(line))
+        {
+            if (match.Success && match.Length > 0)
+            {
+                candidates.Add(new ProtectedPhraseMatch(match.Index, match.Index + match.Length, match.Value));
+            }
+        }
+
+        foreach (var glossaryMatch in TranslationGlossaryRuntime.Default.FindDirectMatches(line))
+        {
+            if (glossaryMatch.Action == TranslationGlossaryAction.Preserve && glossaryMatch.Length > 0)
+            {
+                candidates.Add(new ProtectedPhraseMatch(
+                    glossaryMatch.StartIndex,
+                    glossaryMatch.EndIndex,
+                    line[glossaryMatch.StartIndex..glossaryMatch.EndIndex]));
             }
         }
 
@@ -2138,6 +2284,11 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             return false;
         }
 
+        if (TranslationGlossaryRuntime.Default.ShouldForceTranslate(line))
+        {
+            return false;
+        }
+
         if (ForceTranslateDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(line)))
         {
             return false;
@@ -2160,8 +2311,8 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         }
 
         var stopWordCount = englishWords.Count(IsEnglishStopWord);
-        var translatableRun = GetMaxTranslatableRun(englishWords);
-        return stopWordCount == 0 && translatableRun <= 1;
+        var aliasLikeCount = englishWords.Count(IsLikelyAliasWord);
+        return stopWordCount == 0 && aliasLikeCount == englishWords.Count;
     }
 
     private static bool LooksLikeMetadataLine(string line)
@@ -2201,7 +2352,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         }
 
         var stopWordCount = englishWords.Count(IsEnglishStopWord);
-        if (MetadataKeywordRegex.IsMatch(line) && stopWordCount <= 2)
+        if (PreservingMetadataKeywordRegex.IsMatch(line) && stopWordCount <= 2)
         {
             return true;
         }
@@ -2226,6 +2377,21 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
         if (ProtectedDomainPhrasePatterns.Any(pattern => pattern.Pattern.IsMatch(span)))
         {
             return true;
+        }
+
+        if (TranslationGlossaryRuntime.Default.HasPreserveEntry(span))
+        {
+            return true;
+        }
+
+        if (DynamicNamedLocationRegex.IsMatch(span) || DynamicTitledNameRegex.IsMatch(span))
+        {
+            return true;
+        }
+
+        if (TranslationGlossaryRuntime.Default.ShouldForceTranslate(span))
+        {
+            return false;
         }
 
         var words = GetEnglishWords(span);
@@ -2318,7 +2484,7 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             return false;
         }
 
-        if (MetadataKeywordRegex.IsMatch(cleanWord))
+        if (PreservingMetadataKeywordRegex.IsMatch(cleanWord))
         {
             return true;
         }
@@ -2333,13 +2499,37 @@ internal sealed class LocalNllbTranslationProvider : ITranslationProvider, IDisp
             return true;
         }
 
-        if (char.IsUpper(cleanWord[0]))
+        if (LooksLikeProtectedCompoundAliasWord(cleanWord))
         {
             return true;
         }
 
-        return cleanWord.Skip(1).Any(char.IsUpper)
-            || cleanWord.Equals(cleanWord.ToUpperInvariant(), StringComparison.Ordinal);
+        var isAllUpper = cleanWord.Equals(cleanWord.ToUpperInvariant(), StringComparison.Ordinal);
+        if (!isAllUpper && cleanWord.Skip(1).Any(char.IsUpper))
+        {
+            return true;
+        }
+
+        return isAllUpper && cleanWord.Length <= 4;
+    }
+
+    private static bool LooksLikeProtectedCompoundAliasWord(string word)
+    {
+        if (!word.Contains('-', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parts = word.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        return parts.All(static part =>
+            part.Length > 1
+            && char.IsUpper(part[0])
+            && part.Skip(1).All(static character => char.IsLower(character)));
     }
 
     private static bool ContainsLatin(string text) => text.Any(IsLatin);
